@@ -1,6 +1,6 @@
-"""오리지널 크림색 곰 캐릭터를 만들고 GLB(안드로이드/웹)와 USDZ(아이폰 Quick Look)로 내보내는 스크립트.
+"""바나나 옷을 입은 오리지널 아기 고양이 캐릭터를 만들고 GLB(안드로이드/웹)와 USDZ(아이폰 Quick Look)로 내보내는 스크립트.
 실행: python build_bear.py <출력폴더>   (pip install bpy==5.3.0, Python 3.13)
-단위: 센티미터로 만들고 루트를 0.01배 → 결과물은 미터 단위, 원점 = 발바닥. 키 약 14cm.
+단위: 센티미터로 만들고 루트를 0.01배 → 결과물은 미터 단위, 원점 = 발바닥. 키 약 16cm.
 """
 import sys, os, math
 import bpy, bmesh
@@ -28,13 +28,17 @@ def material(name, hexcol, rough=0.8):
     return m
 
 M = dict(
-    fur=material('Fur', '#F6E2B3'),
-    belly=material('Belly', '#FFF6E2'),
-    inner=material('InnerEar', '#E3A96B'),
+    suit=material('BananaSuit', '#F6D64A', 0.75),
+    stem=material('BananaStem', '#6E4A2A', 0.8),
+    fur=material('KittenFur', '#F3CBA0'),
+    stripe=material('Stripe', '#DE9F68'),
+    muzzle=material('Muzzle', '#FFF8EE'),
+    paw=material('Paw', '#F6DCC0'),
     eye=material('Eye', '#2A211C', 0.25),
     shine=material('Shine', '#FFFFFF', 0.2),
     cheek=material('Cheek', '#FFB4A2', 0.9),
-    nose=material('Nose', '#7A4A35', 0.5),
+    nose=material('Nose', '#F2A0A4', 0.5),
+    mouth=material('Mouth', '#7A4A35', 0.5),
 )
 
 def empty(name, parent=None, loc=(0, 0, 0)):
@@ -58,10 +62,10 @@ def sphere(name, mat, parent, loc, scl, rot=(0, 0, 0)):
     o.location, o.scale, o.rotation_euler = loc, scl, rot
     return o
 
-def smile(name, mat, parent, loc):
+def smile(name, mat, parent, loc, R=0.48, r=0.11):
     me = bpy.data.meshes.new(name)
     bm = bmesh.new()
-    R, r, N, n = 0.48, 0.11, 32, 10
+    N, n = 32, 10
     verts = []
     for i in range(N + 1):                      # 아래쪽 반원 (웃는 입)
         a = math.pi + math.pi * i / N
@@ -85,32 +89,53 @@ def smile(name, mat, parent, loc):
     o.location = loc
     return o
 
+
+def cylinder(name, mat, parent, loc, r1, r2, h, rot=(0, 0, 0)):
+    me = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=20, radius1=r1, radius2=r2, depth=h)
+    bm.to_mesh(me); bm.free()
+    me.materials.append(mat)
+    o = bpy.data.objects.new(name, me)
+    scene.collection.objects.link(o)
+    o.parent = parent
+    o.location, o.rotation_euler = loc, rot
+    return o
+
 # ---------- 캐릭터 (앞쪽 = -Y, 위 = +Z) ----------
-root = empty('Bear'); root.scale = (0.01, 0.01, 0.01)
+root = empty('Kitten'); root.scale = (0.0085, 0.0085, 0.0085)   # 약 16cm
 mover = empty('Mover', root)          # 점프/달리기 이동
 squash = empty('Squash', mover)       # 몸 늘었다 줄었다 (발바닥 기준)
 
-sphere('Body', M['fur'], squash, (0, 0, 4.4), (3.4, 3.1, 3.5))
-sphere('BellyPatch', M['belly'], squash, (0, -2.75, 4.0), (2.0, 0.6, 2.1))
-sphere('Tail', M['fur'], squash, (0, 3.0, 2.6), (0.85, 0.85, 0.85))
+sphere('SuitBody', M['suit'], squash, (0, 0, 4.4), (3.5, 3.2, 3.7))
 
 head = empty('Head', squash, (0, 0, 7.2))
-sphere('HeadShape', M['fur'], head, (0, 0, 2.8), (4.6, 4.1, 4.0))
+# 바나나 모자: 머리를 감싸고 위로 갈수록 가늘어지며 살짝 휘어짐
+sphere('SuitHood', M['suit'], head, (0, 0.2, 2.6), (4.2, 3.8, 4.2))
+for i in range(16):                       # 위로 갈수록 가늘어지며 한쪽으로 살짝 휘는 바나나 끝
+    u = i / 15
+    rad = 3.3 * (1 - u) ** 0.9 + 0.55 * u
+    sphere(f'SuitTip_{i}', M['suit'], head, (1.6 * u * u, 0.3 + 1.0 * u, 4.5 + 6.0 * u), (rad, rad * 0.95, rad))
+cylinder('Stem', M['stem'], head, (1.85, 1.3, 11.15), 0.5, 0.4, 1.4, (0, 0.3, 0))
+# 모자 구멍으로 보이는 아기 고양이 얼굴
+sphere('Face', M['fur'], head, (0, -2.6, 2.4), (2.9, 1.6, 2.5))
+for i, x in enumerate((-0.7, 0, 0.7)):
+    sphere(f'Stripe_{i}', M['stripe'], head, (x, -3.72, 4.05 + (0.15 if x == 0 else 0)), (0.2, 0.22, 0.55), (0, -x * 0.35, 0))
+sphere('Muzzle', M['muzzle'], head, (0, -3.85, 1.5), (1.35, 0.55, 0.9))
+sphere('Nose', M['nose'], head, (0, -4.36, 1.9), (0.3, 0.2, 0.22))
+smile('Mouth', M['mouth'], head, (0, -4.36, 1.5), R=0.3, r=0.08)
 for s, side in ((1, 'L'), (-1, 'R')):
-    sphere(f'Ear_{side}', M['fur'], head, (s * 3.3, 0.3, 6.4), (1.6, 1.1, 1.6))
-    sphere(f'InnerEar_{side}', M['inner'], head, (s * 3.3, -0.75, 6.3), (1.0, 0.3, 1.0))
-    eye = empty(f'Eye_{side}', head, (s * 1.6, -3.72, 2.5))
-    sphere(f'EyeBall_{side}', M['eye'], eye, (0, 0, 0), (0.55, 0.3, 0.72))
-    sphere(f'EyeShine_{side}', M['shine'], eye, (s * 0.15 + 0.05, -0.24, 0.25), (0.19, 0.1, 0.19))
-    sphere(f'Cheek_{side}', M['cheek'], head, (s * 2.9, -2.85, 1.6), (0.75, 0.25, 0.45), (0, 0, s * 0.66))
-sphere('Nose', M['nose'], head, (0, -4.0, 2.15), (0.42, 0.3, 0.3))
-smile('Mouth', M['nose'], head, (0, -3.86, 1.75))
+    eye = empty(f'Eye_{side}', head, (s * 1.15, -3.95, 2.6))
+    sphere(f'EyeBall_{side}', M['eye'], eye, (0, 0, 0), (0.62, 0.3, 0.72))
+    sphere(f'EyeShine_{side}', M['shine'], eye, (s * 0.15 + 0.08, -0.24, 0.25), (0.22, 0.1, 0.22))
+    sphere(f'Cheek_{side}', M['cheek'], head, (s * 2.05, -3.55, 1.65), (0.55, 0.2, 0.35), (0, 0, s * 0.6))
 
 for s, side in ((1, 'L'), (-1, 'R')):
-    arm = empty(f'Arm_{side}', squash, (s * 3.0, -0.3, 6.2))
-    sphere(f'ArmShape_{side}', M['fur'], arm, (s * 0.55, 0, -1.45), (0.9, 0.9, 1.6), (0, -s * 0.35, 0))
+    arm = empty(f'Arm_{side}', squash, (s * 3.1, -0.3, 6.0))
+    sphere(f'ArmSuit_{side}', M['suit'], arm, (s * 0.55, 0, -1.3), (0.95, 0.95, 1.5), (0, -s * 0.35, 0))
+    sphere(f'Paw_{side}', M['paw'], arm, (s * 1.05, 0, -2.75), (0.75, 0.75, 0.7))
     foot = empty(f'Foot_{side}', mover, (s * 1.5, -0.5, 0))
-    sphere(f'FootShape_{side}', M['fur'], foot, (0, 0, 0.65), (1.2, 1.5, 0.7))
+    sphere(f'FootPaw_{side}', M['paw'], foot, (0, 0, 0.65), (1.2, 1.5, 0.7))
 
 ANIM = ['Mover', 'Squash', 'Head', 'Arm_L', 'Arm_R', 'Eye_L', 'Eye_R', 'Foot_L', 'Foot_R']
 OBJ = {n: bpy.data.objects[n] for n in ANIM}
@@ -249,10 +274,10 @@ for name, dur in CLIPS.items():
 clear_actions(); reset_rest()
 scene.frame_start, scene.frame_end = 0, 1
 
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'bear.blend'))
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'kitten.blend'))
 
 bpy.ops.export_scene.gltf(
-    filepath=os.path.join(OUT, 'bear.glb'), export_format='GLB',
+    filepath=os.path.join(OUT, 'kitten.glb'), export_format='GLB',
     export_animations=True, export_animation_mode='NLA_TRACKS',
     export_force_sampling=True, export_frame_step=1, export_yup=True,
     export_def_bones=False, export_optimize_animation_size=False)
@@ -276,7 +301,7 @@ scene.frame_start, scene.frame_end = 0, frame
 print('USDZ sequence frames:', frame, 'seconds:', frame / FPS)
 
 bpy.ops.wm.usd_export(
-    filepath=os.path.join(OUT, 'bear.usdz'),
+    filepath=os.path.join(OUT, 'kitten.usdz'),
     export_animation=True, export_materials=True, generate_preview_surface=True,
     selected_objects_only=False,
     convert_orientation=True, export_global_forward_selection='NEGATIVE_Z',

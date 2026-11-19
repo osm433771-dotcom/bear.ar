@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>곰돌이 AR</title>
+<title>바나나 고양이 AR</title>
 <!-- model-viewer 4.1.0 (파일 안에 같이 들어 있음, 인터넷 CDN 필요 없음) -->
 <script type="module" src="model-viewer.min.js"></script>
 <style>
@@ -30,22 +30,22 @@
 </head>
 <body>
 <!--
-  bear.glb  : 안드로이드(WebXR)와 3D 미리보기용. 동작 Idle / Wave / Jump / Run 이 따로 들어 있음.
-  bear.usdz : 아이폰(Quick Look)용. Quick Look은 버튼을 쓸 수 없어서
+  kitten.glb  : 안드로이드(WebXR)와 3D 미리보기용. 동작 Idle / Wave / Jump / Run 이 따로 들어 있음.
+  kitten.usdz : 아이폰(Quick Look)용. Quick Look은 버튼을 쓸 수 없어서
               손 흔들기 → 점프 → 뛰어다니기가 한 줄로 이어져 계속 반복됨.
-  크기: 키 약 15cm (실제 크기 고정), 뛰어다니기는 책상 위 가로 약 18cm × 세로 약 10cm 안에서 8자로 돎.
+  크기: 키 약 16cm (실제 크기 고정), 뛰어다니기는 책상 위 가로 약 15cm × 세로 약 9cm 안에서 8자로 돎.
 -->
-<model-viewer id="mv" src="bear.glb" ios-src="bear.usdz"
+<model-viewer id="mv" src="kitten.glb" ios-src="kitten.usdz"
   ar ar-modes="webxr scene-viewer quick-look" ar-placement="floor" ar-scale="fixed"
   camera-controls touch-action="pan-y" camera-orbit="20deg 65deg 0.65m" min-camera-orbit="auto auto 0.25m" max-camera-orbit="auto auto 1.5m"
   shadow-intensity="1" shadow-softness="0.8" environment-image="neutral" exposure="1.05"
-  autoplay animation-name="Idle" alt="책상 위의 곰돌이">
+  autoplay animation-name="Idle" alt="책상 위의 바나나 고양이">
 
-  <div id="loading" slot="poster">곰돌이 불러오는 중…</div>
+  <div id="loading" slot="poster">바나나 고양이 불러오는 중…</div>
 
   <div class="card">
-    <h1>곰돌이 AR</h1>
-    <p>아래 초록 버튼을 누르고 폰으로 책상을 천천히 비추면 곰돌이가 올라가요. 지금: <span id="now">준비 중</span></p>
+    <h1>바나나 고양이 AR</h1>
+    <p>아래 초록 버튼을 누르고 폰으로 책상을 천천히 비추면 바나나 고양이가 올라가요. 지금: <span id="now">준비 중</span></p>
     <p id="note"></p>
   </div>
 
