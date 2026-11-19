@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>곰돌이 AR</title>
+<!-- model-viewer 4.1.0 (파일 안에 같이 들어 있음, 인터넷 CDN 필요 없음) -->
+<script type="module" src="model-viewer.min.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #F4EFE8; overflow: hidden;
+    font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; color: #4a3b33; }
+  model-viewer { width: 100%; height: 100%; --poster-color: transparent; background: #F4EFE8; }
+  .card { position: absolute; top: 14px; left: 14px; right: 14px; max-width: 360px;
+    background: rgba(255,255,255,.85); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    padding: 12px 14px; border-radius: 14px; box-shadow: 0 4px 18px rgba(80,60,40,.10); }
+  .card h1 { font-size: 16px; margin: 0 0 4px; }
+  .card p { font-size: 12.5px; margin: 0; line-height: 1.5; opacity: .85; }
+  #now { font-weight: 700; color: #5f9e50; }
+  #note { display: none; margin-top: 6px; font-size: 12px; color: #a0522d; }
+  .bar { position: absolute; bottom: 92px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; width: min(520px, 94vw); }
+  .bar button { border: 0; border-radius: 999px; padding: 9px 13px; font-size: 13.5px; font-weight: 600;
+    background: #fff; color: #4a3b33; box-shadow: 0 3px 12px rgba(80,60,40,.15); }
+  .bar button.on { background: #4a3b33; color: #fff; }
+  #ar-btn { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    border: 0; border-radius: 999px; padding: 15px 26px; font-size: 16px; font-weight: 700;
+    background: #7CC46A; color: #fff; box-shadow: 0 6px 18px rgba(80,120,60,.35); white-space: nowrap; }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; }
+</style>
+</head>
+<body>
+<!--
+  bear.glb  : 안드로이드(WebXR)와 3D 미리보기용. 동작 Idle / Wave / Jump / Run 이 따로 들어 있음.
+  bear.usdz : 아이폰(Quick Look)용. Quick Look은 버튼을 쓸 수 없어서
+              손 흔들기 → 점프 → 뛰어다니기가 한 줄로 이어져 계속 반복됨.
+  크기: 키 약 15cm (실제 크기 고정), 뛰어다니기는 책상 위 가로 약 18cm × 세로 약 10cm 안에서 8자로 돎.
+-->
+<model-viewer id="mv" src="bear.glb" ios-src="bear.usdz"
+  ar ar-modes="webxr scene-viewer quick-look" ar-placement="floor" ar-scale="fixed"
+  camera-controls touch-action="pan-y" camera-orbit="20deg 65deg 0.65m" min-camera-orbit="auto auto 0.25m" max-camera-orbit="auto auto 1.5m"
+  shadow-intensity="1" shadow-softness="0.8" environment-image="neutral" exposure="1.05"
+  autoplay animation-name="Idle" alt="책상 위의 곰돌이">
+
+  <div id="loading" slot="poster">곰돌이 불러오는 중…</div>
+
+  <div class="card">
+    <h1>곰돌이 AR</h1>
+    <p>아래 초록 버튼을 누르고 폰으로 책상을 천천히 비추면 곰돌이가 올라가요. 지금: <span id="now">준비 중</span></p>
+    <p id="note"></p>
+  </div>
+
+  <div class="bar" id="bar">
+    <button id="auto" class="on">자동 ON</button>
+    <button data-act="Wave">손 흔들기</button>
+    <button data-act="Jump">점프</button>
+    <button data-act="Run">뛰어다니기</button>
+  </div>
+
+  <button id="ar-btn" slot="ar-button">📷 책상에 올려보기</button>
+</model-viewer>
+
+<script type="module">
+const mv = document.getElementById('mv');
+const nowEl = document.getElementById('now');
+const noteEl = document.getElementById('note');
+const note = t => { noteEl.textContent = t; noteEl.style.display = 'block'; };
+
+const LABEL = { Idle: '쉬는 중', Wave: '손 흔들기', Jump: '점프', Run: '뛰어다니기' };
+const ACTIONS = ['Wave', 'Jump', 'Run'];
+let auto = true, timer = null, ready = false;
+
+async function playOnce(name) {
+  if (!ready) return;
+  clearTimeout(timer);
+  mv.animationName = name;
+  await mv.updateComplete;          // 동작 이름이 반영된 뒤에 '한 번만 재생'을 걸어야 반복되지 않음
+  mv.currentTime = 0;
+  mv.play({ repetitions: 1 });
+  nowEl.textContent = LABEL[name];
+}
+function goIdle() {
+  clearTimeout(timer);
+  mv.animationName = 'Idle';
+  mv.play();
+  nowEl.textContent = LABEL.Idle;
+  if (auto)
+    timer = setTimeout(() => playOnce(ACTIONS[Math.floor(Math.random() * ACTIONS.length)]), 2500 + Math.random() * 3000);
+}
+mv.addEventListener('finished', goIdle);
+
+mv.addEventListener('load', () => {
+  ready = true;
+  goIdle();
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!mv.canActivateAR) note('이 기기나 브라우저에서는 AR을 쓸 수 없어요. 아이폰(Safari) 또는 안드로이드(Chrome)에서 열어 주세요. 여기서는 3D로만 볼 수 있어요.');
+  else if (isIOS) note('아이폰 AR에서는 버튼을 쓸 수 없어서 손 흔들기 → 점프 → 뛰어다니기가 차례로 계속 반복돼요.');
+});
+
+mv.addEventListener('error', () => note('모델을 불러오지 못했어요. 새로고침해 주세요.'));
+
+document.querySelectorAll('[data-act]').forEach(b =>
+  b.addEventListener('click', e => { e.stopPropagation(); playOnce(b.dataset.act); }));
+
+const autoBtn = document.getElementById('auto');
+autoBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  auto = !auto;
+  autoBtn.textContent = auto ? '자동 ON' : '자동 OFF';
+  autoBtn.classList.toggle('on', auto);
+  goIdle();
+});
+</script>
+</body>
+</html>
